@@ -14,6 +14,43 @@ class User < ApplicationRecord
     validates :password_digest, presence: true
     validates :session_token, uniqueness: true
   
+    attr_reader :password
 
+    def self.find_by_credentials(username, password)
+        user = User.find_by(username: username)
+        if user && user.is_password?(password)
+            user
+        else
+            nil
+        end
+    end
+
+    def is_password?(password)
+        bcrpt_obj = BCrypt::Password.new(password_digest)
+        bcrpt_obj.is_password?(password)
+    end
+
+    def generate_unique_session_token
+        token = SecureRandom::urlsafe_base64
+        while User.exists?(session_token: token)
+            token = SecureRandom::urlsafe_base64
+        end
+        token
+    end
+
+    def password=(password)
+        self.password_digest = BCrpyt::Password.create(password)
+        @password = password
+    end
+
+    def ensure_session_token
+        self.session_token = generate_unique_session_token
+    end
+
+    def reset_session_token
+        self.session_token = generate_unique_session_token
+        self.save!
+        self.session_token
+    end
     
 end
